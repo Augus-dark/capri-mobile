@@ -25,7 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
@@ -61,8 +62,8 @@ class MainActivity : ComponentActivity() {
 
 data class ChatMessage(val role: String, val content: String)
 
-class CapriViewModel : ViewModel() {
-    private val prefs = CapriAppContext.app.getSharedPreferences("capri_native", 0)
+class CapriViewModel(application: Application) : AndroidViewModel(application) {
+    private val prefs = application.getSharedPreferences("capri_native", 0)
     private val http = OkHttpClient.Builder()
         .connectTimeout(25, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
@@ -170,10 +171,6 @@ class CapriViewModel : ViewModel() {
     }
 }
 
-private object CapriAppContext {
-    lateinit var app: android.content.Context
-}
-
 private object SecretBox {
     private const val ALIAS = "capri_api_key_v1"
     private fun key(): SecretKey {
@@ -209,7 +206,6 @@ private object SecretBox {
 
 @Composable
 fun CapriApp(vm: CapriViewModel = viewModel()) {
-    CapriAppContext.app = androidx.compose.ui.platform.LocalContext.current.applicationContext
     var settings by remember { mutableStateOf(false) }
     MaterialTheme(
         colorScheme = darkColorScheme(
