@@ -71,8 +71,8 @@ class CapriViewModel(application: Application) : AndroidViewModel(application) {
 
     var messages by mutableStateOf(loadMessages())
         private set
-    var baseUrl by mutableStateOf(prefs.getString("base_url", "https://openrouter.ai/api/v1") ?: "")
-    var model by mutableStateOf(prefs.getString("model", "openai/gpt-4o-mini") ?: "")
+    var baseUrl by mutableStateOf(prefs.getString("base_url", "https://api.groq.com/openai/v1") ?: "")
+    var model by mutableStateOf(prefs.getString("model", "openai/gpt-oss-20b") ?: "")
     var apiKey by mutableStateOf("")
     var busy by mutableStateOf(false)
         private set
@@ -128,7 +128,18 @@ class CapriViewModel(application: Application) : AndroidViewModel(application) {
     private fun requestAnswer(history: List<ChatMessage>): String {
         val endpoint = baseUrl.trim().trimEnd('/') + "/chat/completions"
         val arr = JSONArray()
-        history.takeLast(30).forEach { msg ->
+        val memories = runCatching { JSONArray(prefs.getString("memories", "[]")) }.getOrDefault(JSONArray())
+        val memoryText = (0 until memories.length()).joinToString("\\n") { "- " + memories.optString(it) }
+        val systemPrompt = buildString {
+            append("Você é a Capri, uma assistente virtual simpática no celular do usuário. ")
+            append("Responda em português do Brasil, em 1 a 3 frases curtas, sem markdown. ")
+            append("Use as ferramentas quando o usuário pedir algo. Nunca peça nem guarde senhas ou dados sensíveis. ")
+            append("Nunca invente que fez algo. Você foi criada por Augusto; se perguntarem quem te criou, diga isso. ")
+            append("Agora é ").append(java.time.ZonedDateTime.now().toString()).append(".")
+            if (memoryText.isNotBlank()) append("\\n\\nO que você lembra do usuário:\\n").append(memoryText)
+        }
+        arr.put(JSONObject().put("role", "system").put("content", systemPrompt))
+        history.takeLast(12).forEach { msg ->
             arr.put(JSONObject().put("role", msg.role).put("content", msg.content))
         }
         val body = JSONObject()
